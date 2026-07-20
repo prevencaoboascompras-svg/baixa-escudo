@@ -1,7 +1,7 @@
 {
-  "name": "Estoque de Frios — Coletor",
-  "short_name": "Frios",
-  "description": "Controle de estoque, entradas e baixas de frios da padaria",
+  "name": "Baixa de Frios",
+  "short_name": "Baixa Frios",
+  "description": "Dar baixa no estoque de frios ao pesar na balança",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -9,17 +9,7 @@
   "background_color": "#1a1a1a",
   "theme_color": "#1a1a1a",
   "icons": [
-    {
-      "src": "android-chrome-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "android-chrome-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    }
+    { "src": "android-chrome-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }

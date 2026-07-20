@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
-<link rel="manifest" href="site.webmanifest">
+<link rel="manifest" href="baixa.webmanifest">
 <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
 
 <script>
@@ -33,7 +33,7 @@
 </script>
 
 <script>
-  // ===== IDENTIFICAÇÃO (sem senha — só marca quem está pesando/dando baixa) =====
+  // ===== IDENTIFICAÇÃO (senha numérica de 4 dígitos = dia+mês de nascimento) =====
   const NOMES_FUNCIONARIOS = ['Alessandra Oliveira de Oliveira','Juliana','Karen Machado Fortuna','Katia Brasil Vieira','Leonardo de Souza Ribeiro','Leticia','Michael de Matos Leal','Taiti Gabriela Witter Loch','Wagner','Outro'];
   const LOGIN_STORAGE_KEY = 'frios_baixa_usuario';
 
@@ -90,6 +90,15 @@
     mostrarMensagemAniversario(nome);
   }
 
+  function senhaEsperada(nome){
+    const dataAniv = ANIVERSARIOS[nome];
+    if(!dataAniv) return null;
+    const [dia, mes] = dataAniv.split('/');
+    return dia.padStart(2,'0') + mes.padStart(2,'0');
+  }
+
+  let usuarioSelecionado = null;
+
   function selecionarUsuario(nome){
     if(nome === 'Outro'){
       const digitado = prompt('Digite seu nome:');
@@ -98,8 +107,40 @@
       liberarAcesso(digitado.trim());
       return;
     }
-    storageSet(LOGIN_STORAGE_KEY, nome);
-    liberarAcesso(nome);
+    usuarioSelecionado = nome;
+    document.getElementById('login-avatars').style.display = 'none';
+    document.getElementById('login-step1-sub').style.display = 'none';
+    document.getElementById('login-footer').style.display = 'none';
+    document.getElementById('login-senha-usuario').textContent = primeiroNome(nome);
+    document.getElementById('login-senha-erro').textContent = '';
+    const input = document.getElementById('login-senha-input');
+    input.value = '';
+    document.getElementById('login-senha-box').classList.add('show');
+    setTimeout(() => input.focus(), 50);
+  }
+
+  function voltarLogin(){
+    usuarioSelecionado = null;
+    document.getElementById('login-senha-box').classList.remove('show');
+    document.getElementById('login-avatars').style.display = 'flex';
+    document.getElementById('login-step1-sub').style.display = 'block';
+    document.getElementById('login-footer').style.display = 'block';
+  }
+
+  function digitarSenha(input){
+    input.value = input.value.replace(/\D/g,'').slice(0,4);
+    const erroEl = document.getElementById('login-senha-erro');
+    erroEl.textContent = '';
+    if(input.value.length === 4){
+      if(input.value === senhaEsperada(usuarioSelecionado)){
+        storageSet(LOGIN_STORAGE_KEY, usuarioSelecionado);
+        liberarAcesso(usuarioSelecionado);
+      } else {
+        erroEl.textContent = 'Senha incorreta.';
+        if(navigator.vibrate) navigator.vibrate(120);
+        setTimeout(() => { input.value=''; input.focus(); }, 300);
+      }
+    }
   }
 
   (function verificarLoginExistente(){
@@ -348,7 +389,18 @@ body{
       </div>
     </div>
 
-    <div class="login-footer">Toque no seu nome para começar a dar baixa</div>
+    <div id="login-senha-box" class="login-senha-box">
+      <div class="login-senha-usuario" id="login-senha-usuario"></div>
+      <input type="text" id="login-senha-input" class="login-senha-input" placeholder="● ● ● ●"
+             inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
+             oninput="digitarSenha(this)">
+      <div id="login-senha-erro" class="login-senha-erro"></div>
+      <div class="login-senha-botoes">
+        <button class="login-btn-voltar" onclick="voltarLogin()">‹ Voltar</button>
+      </div>
+    </div>
+
+    <div class="login-footer" id="login-footer">Toque no seu nome para começar a dar baixa</div>
   </div>
 </div>
 

@@ -34,8 +34,50 @@
 
 <script>
   // ===== IDENTIFICAÇÃO (sem senha — só marca quem está pesando/dando baixa) =====
-  const NOMES_FUNCIONARIOS = ['Leonardo','Taiti','Wagner','Outro'];
+  const NOMES_FUNCIONARIOS = ['Alessandra Oliveira de Oliveira','Juliana','Karen Machado Fortuna','Katia Brasil Vieira','Leonardo de Souza Ribeiro','Leticia','Michael de Matos Leal','Taiti Gabriela Witter Loch','Wagner','Outro'];
   const LOGIN_STORAGE_KEY = 'frios_baixa_usuario';
+
+  // ===== ANIVERSÁRIOS (dia/mês) — usado pra mensagem de parabéns/contagem regressiva =====
+  const ANIVERSARIOS = {
+    'Alessandra Oliveira de Oliveira': '25/09',
+    'Juliana': '24/01',
+    'Karen Machado Fortuna': '28/08',
+    'Katia Brasil Vieira': '11/11',
+    'Leonardo de Souza Ribeiro': '12/01',
+    'Leticia': '31/10',
+    'Michael de Matos Leal': '05/02',
+    'Taiti Gabriela Witter Loch': '13/06',
+    'Wagner': '29/04'
+  };
+
+  function primeiroNome(nomeCompleto){ return (nomeCompleto||'').trim().split(' ')[0]; }
+
+  function diasParaAniversario(dataStr){
+    const [dia, mes] = dataStr.split('/').map(Number);
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    let prox = new Date(hoje.getFullYear(), mes - 1, dia);
+    if (prox < hoje) prox = new Date(hoje.getFullYear() + 1, mes - 1, dia);
+    return Math.round((prox - hoje) / 86400000);
+  }
+
+  function mostrarMensagemAniversario(nome){
+    const el = document.getElementById('aniversario-banner');
+    if(!el) return;
+    const dataAniv = ANIVERSARIOS[nome];
+    if(!dataAniv){ el.classList.remove('show'); return; }
+    const dias = diasParaAniversario(dataAniv);
+    const primeiro = primeiroNome(nome);
+    let linha1;
+    if(dias === 0){
+      linha1 = `🎉 Hoje é o seu aniversário, ${primeiro}!`;
+    } else if(dias === 1){
+      linha1 = `${primeiro}, falta 1 dia para o seu aniversário!`;
+    } else {
+      linha1 = `${primeiro}, faltam ${dias} dias para o seu aniversário!`;
+    }
+    el.innerHTML = `<span class="icone">🎂</span><span><span class="linha1">${linha1}</span><br><span class="linha2">O Boas Compras vai comemorar com você! 🎉</span></span>`;
+    el.classList.add('show');
+  }
 
   function storageGet(key){ try{ return sessionStorage.getItem(key); }catch(e){ return window['_mem_'+key] || null; } }
   function storageSet(key,val){ try{ sessionStorage.setItem(key,val); }catch(e){ window['_mem_'+key] = val; } }
@@ -45,6 +87,7 @@
     document.getElementById('app-conteudo').style.display = 'block';
     const respEl = document.getElementById('baixa-resp');
     if(respEl && nome && nome !== 'Outro') respEl.value = nome;
+    mostrarMensagemAniversario(nome);
   }
 
   function selecionarUsuario(nome){
@@ -116,6 +159,12 @@ body{
 /* ═══════ OFFLINE / SYNC BAR ═══════ */
 .offline-bar{display:none;background:var(--yellow);color:#000;font-size:12px;font-weight:700;padding:7px 20px;text-align:center;}
 .offline-bar.show{display:block;}
+
+.aniversario-banner{display:none;background:#2a1a16;border:1px solid var(--accent2);color:var(--text);font-size:13px;padding:12px 14px;margin:14px 16px 0;border-radius:var(--r);align-items:center;gap:10px;line-height:1.45;}
+.aniversario-banner.show{display:flex;}
+.aniversario-banner .icone{font-size:22px;flex-shrink:0;}
+.aniversario-banner .linha1{color:var(--accent);font-weight:700;}
+.aniversario-banner .linha2{color:var(--text2);}
 
 /* ═══════ HEADER ═══════ */
 .hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;position:sticky;top:0;background:var(--bg);z-index:20;border-bottom:1px solid var(--border);gap:10px;}
@@ -253,11 +302,35 @@ body{
     <div class="login-sub" id="login-step1-sub">Quem está pesando/dando baixa?</div>
 
     <div id="login-avatars" class="login-avatars">
-      <div class="login-avatar" onclick="selecionarUsuario('Leonardo')">
+      <div class="login-avatar" onclick="selecionarUsuario('Alessandra Oliveira de Oliveira')">
+        <div class="login-avatar-circle">A</div>
+        <div class="login-avatar-nome">Alessandra</div>
+      </div>
+      <div class="login-avatar" onclick="selecionarUsuario('Juliana')">
+        <div class="login-avatar-circle">J</div>
+        <div class="login-avatar-nome">Juliana</div>
+      </div>
+      <div class="login-avatar" onclick="selecionarUsuario('Karen Machado Fortuna')">
+        <div class="login-avatar-circle">K</div>
+        <div class="login-avatar-nome">Karen</div>
+      </div>
+      <div class="login-avatar" onclick="selecionarUsuario('Katia Brasil Vieira')">
+        <div class="login-avatar-circle">K</div>
+        <div class="login-avatar-nome">Katia</div>
+      </div>
+      <div class="login-avatar" onclick="selecionarUsuario('Leonardo de Souza Ribeiro')">
         <div class="login-avatar-circle">L</div>
         <div class="login-avatar-nome">Leonardo</div>
       </div>
-      <div class="login-avatar" onclick="selecionarUsuario('Taiti')">
+      <div class="login-avatar" onclick="selecionarUsuario('Leticia')">
+        <div class="login-avatar-circle">L</div>
+        <div class="login-avatar-nome">Leticia</div>
+      </div>
+      <div class="login-avatar" onclick="selecionarUsuario('Michael de Matos Leal')">
+        <div class="login-avatar-circle">M</div>
+        <div class="login-avatar-nome">Michael</div>
+      </div>
+      <div class="login-avatar" onclick="selecionarUsuario('Taiti Gabriela Witter Loch')">
         <div class="login-avatar-circle">T</div>
         <div class="login-avatar-nome">Taiti</div>
       </div>
@@ -277,6 +350,8 @@ body{
 
 <!-- ═══════ APP ═══════ -->
 <div id="app-conteudo" class="app-conteudo-protegido">
+
+  <div class="aniversario-banner" id="aniversario-banner"></div>
 
   <div class="hdr">
     <div class="hdr-left">

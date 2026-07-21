@@ -6,15 +6,15 @@
 <meta name="theme-color" content="#1a1a1a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Baixa Frios">
-<title>Baixa de Frios</title>
+<meta name="apple-mobile-web-app-title" content="Frios">
+<title>Estoque de Frios — Coletor</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
-<link rel="manifest" href="baixa.webmanifest">
+<link rel="manifest" href="site.webmanifest">
 <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
 
 <script>
@@ -33,85 +33,34 @@
 </script>
 
 <script>
-  // ===== IDENTIFICAÇÃO (senha numérica de 4 dígitos = dia+mês de nascimento) =====
-  const NOMES_FUNCIONARIOS = ['Alessandra Oliveira de Oliveira','Juliana','Karen Machado Fortuna','Katia Brasil Vieira','Leonardo de Souza Ribeiro','Leticia','Michael de Matos Leal','Taiti Gabriela Witter Loch','Wagner','Outro'];
-  const LOGIN_STORAGE_KEY = 'frios_baixa_usuario';
-
-  // ===== ANIVERSÁRIOS (dia/mês) — usado pra mensagem de parabéns/contagem regressiva =====
-  const ANIVERSARIOS = {
-    'Alessandra Oliveira de Oliveira': '25/09',
-    'Juliana': '24/01',
-    'Karen Machado Fortuna': '28/08',
-    'Katia Brasil Vieira': '11/11',
-    'Leonardo de Souza Ribeiro': '12/01',
-    'Leticia': '31/10',
-    'Michael de Matos Leal': '05/02',
-    'Taiti Gabriela Witter Loch': '13/06',
-    'Wagner': '29/04'
+  // ===== LOGIN (hash SHA-256 — a senha em texto puro nunca fica salva no código) =====
+  const USUARIOS_HASH = {
+    'Leonardo': '06c117bb812639e8f80c10b64953df8b099fd534b2fcae74f49f735b93fedba4',
+    'Taiti':    '36d11eae17888531788f2b5e6ad6130f7f60da4f6076ced7f973cdf51f16eb5f',
+    'Wagner':   '7d3ca4a4cc367aa11f38e2ad017ed96c1e2a8d00b59a982ab2b4e32d3b98b946'
   };
-
-  function primeiroNome(nomeCompleto){ return (nomeCompleto||'').trim().split(' ')[0]; }
-
-  function diasParaAniversario(dataStr){
-    const [dia, mes] = dataStr.split('/').map(Number);
-    const hoje = new Date(); hoje.setHours(0,0,0,0);
-    let prox = new Date(hoje.getFullYear(), mes - 1, dia);
-    if (prox < hoje) prox = new Date(hoje.getFullYear() + 1, mes - 1, dia);
-    return Math.round((prox - hoje) / 86400000);
-  }
-
-  function mostrarMensagemAniversario(nome){
-    const el = document.getElementById('aniversario-banner');
-    if(!el) return;
-    const dataAniv = ANIVERSARIOS[nome];
-    if(!dataAniv){ el.classList.remove('show'); return; }
-    const dias = diasParaAniversario(dataAniv);
-    const primeiro = primeiroNome(nome);
-    let linha1;
-    if(dias === 0){
-      linha1 = `🎉 Hoje é o seu aniversário, ${primeiro}!`;
-    } else if(dias === 1){
-      linha1 = `${primeiro}, falta 1 dia para o seu aniversário!`;
-    } else {
-      linha1 = `${primeiro}, faltam ${dias} dias para o seu aniversário!`;
-    }
-    el.innerHTML = `<span class="icone">🎂</span><span><span class="linha1">${linha1}</span><br><span class="linha2">O Boas Compras vai comemorar com você! 🎉</span></span>`;
-    el.classList.add('show');
-  }
+  const LOGIN_STORAGE_KEY = 'frios_login_usuario';
+  let usuarioSelecionado = null;
 
   function storageGet(key){ try{ return sessionStorage.getItem(key); }catch(e){ return window['_mem_'+key] || null; } }
   function storageSet(key,val){ try{ sessionStorage.setItem(key,val); }catch(e){ window['_mem_'+key] = val; } }
 
+  async function sha256(texto){
+    const buffer = new TextEncoder().encode(texto);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
   function liberarAcesso(nome){
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('app-conteudo').style.display = 'block';
-    const respEl = document.getElementById('baixa-resp');
-    if(respEl && nome && nome !== 'Outro') respEl.value = nome;
-    mostrarMensagemAniversario(nome);
   }
-
-  function senhaEsperada(nome){
-    const dataAniv = ANIVERSARIOS[nome];
-    if(!dataAniv) return null;
-    const [dia, mes] = dataAniv.split('/');
-    return dia.padStart(2,'0') + mes.padStart(2,'0');
-  }
-
-  let usuarioSelecionado = null;
 
   function selecionarUsuario(nome){
-    if(nome === 'Outro'){
-      const digitado = prompt('Digite seu nome:');
-      if(!digitado) return;
-      storageSet(LOGIN_STORAGE_KEY, digitado.trim());
-      liberarAcesso(digitado.trim());
-      return;
-    }
     usuarioSelecionado = nome;
     document.getElementById('login-avatars').style.display = 'none';
     document.getElementById('login-step1-sub').style.display = 'none';
-    document.getElementById('login-footer').style.display = 'none';
-    document.getElementById('login-senha-usuario').textContent = primeiroNome(nome);
+    document.getElementById('login-senha-usuario').textContent = nome;
     document.getElementById('login-senha-erro').textContent = '';
     const input = document.getElementById('login-senha-input');
     input.value = '';
@@ -124,28 +73,27 @@
     document.getElementById('login-senha-box').classList.remove('show');
     document.getElementById('login-avatars').style.display = 'flex';
     document.getElementById('login-step1-sub').style.display = 'block';
-    document.getElementById('login-footer').style.display = 'block';
   }
 
-  function digitarSenha(input){
-    input.value = input.value.replace(/\D/g,'').slice(0,4);
+  async function validarSenha(){
+    if(!usuarioSelecionado) return;
+    const senha = document.getElementById('login-senha-input').value;
     const erroEl = document.getElementById('login-senha-erro');
-    erroEl.textContent = '';
-    if(input.value.length === 4){
-      if(input.value === senhaEsperada(usuarioSelecionado)){
-        storageSet(LOGIN_STORAGE_KEY, usuarioSelecionado);
-        liberarAcesso(usuarioSelecionado);
-      } else {
-        erroEl.textContent = 'Senha incorreta.';
-        if(navigator.vibrate) navigator.vibrate(120);
-        setTimeout(() => { input.value=''; input.focus(); }, 300);
-      }
+    if(!senha){ erroEl.textContent = 'Digite a senha.'; return; }
+
+    const hashDigitado = await sha256(senha);
+    if(hashDigitado === USUARIOS_HASH[usuarioSelecionado]){
+      storageSet(LOGIN_STORAGE_KEY, usuarioSelecionado);
+      liberarAcesso(usuarioSelecionado);
+    } else {
+      erroEl.textContent = 'Senha incorreta.';
+      document.getElementById('login-senha-input').value = '';
     }
   }
 
   (function verificarLoginExistente(){
     const usuarioSalvo = storageGet(LOGIN_STORAGE_KEY);
-    if(usuarioSalvo){
+    if(usuarioSalvo && USUARIOS_HASH[usuarioSalvo]){
       liberarAcesso(usuarioSalvo);
     }
   })();
@@ -169,7 +117,7 @@ body{
   background:var(--bg);color:var(--text);font-size:14px;
   min-height:100vh;max-width:480px;margin:0 auto;
   overflow-x:hidden;-webkit-tap-highlight-color:transparent;
-  padding-bottom:24px;
+  padding-bottom:78px; /* espaço p/ barra inferior */
 }
 
 /* ═══════ LOGIN ═══════ */
@@ -200,12 +148,6 @@ body{
 /* ═══════ OFFLINE / SYNC BAR ═══════ */
 .offline-bar{display:none;background:var(--yellow);color:#000;font-size:12px;font-weight:700;padding:7px 20px;text-align:center;}
 .offline-bar.show{display:block;}
-
-.aniversario-banner{display:none;background:#2a1a16;border:1px solid var(--accent2);color:var(--text);font-size:13px;padding:12px 14px;margin:14px 16px 0;border-radius:var(--r);align-items:center;gap:10px;line-height:1.45;}
-.aniversario-banner.show{display:flex;}
-.aniversario-banner .icone{font-size:22px;flex-shrink:0;}
-.aniversario-banner .linha1{color:var(--accent);font-weight:700;}
-.aniversario-banner .linha2{color:var(--text2);}
 
 /* ═══════ HEADER ═══════ */
 .hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;position:sticky;top:0;background:var(--bg);z-index:20;border-bottom:1px solid var(--border);gap:10px;}
@@ -343,39 +285,15 @@ body{
       </svg>
     </div>
     <div class="login-eyebrow">ESCUDO PADARIA</div>
-    <div class="login-title">Baixa de Frios</div>
-    <div class="login-sub" id="login-step1-sub">Quem está pesando/dando baixa?</div>
+    <div class="login-title">Coletor de Estoque de Frios</div>
+    <div class="login-sub" id="login-step1-sub">Quem está acessando?</div>
 
     <div id="login-avatars" class="login-avatars">
-      <div class="login-avatar" onclick="selecionarUsuario('Alessandra Oliveira de Oliveira')">
-        <div class="login-avatar-circle">A</div>
-        <div class="login-avatar-nome">Alessandra</div>
-      </div>
-      <div class="login-avatar" onclick="selecionarUsuario('Juliana')">
-        <div class="login-avatar-circle">J</div>
-        <div class="login-avatar-nome">Juliana</div>
-      </div>
-      <div class="login-avatar" onclick="selecionarUsuario('Karen Machado Fortuna')">
-        <div class="login-avatar-circle">K</div>
-        <div class="login-avatar-nome">Karen</div>
-      </div>
-      <div class="login-avatar" onclick="selecionarUsuario('Katia Brasil Vieira')">
-        <div class="login-avatar-circle">K</div>
-        <div class="login-avatar-nome">Katia</div>
-      </div>
-      <div class="login-avatar" onclick="selecionarUsuario('Leonardo de Souza Ribeiro')">
+      <div class="login-avatar" onclick="selecionarUsuario('Leonardo')">
         <div class="login-avatar-circle">L</div>
         <div class="login-avatar-nome">Leonardo</div>
       </div>
-      <div class="login-avatar" onclick="selecionarUsuario('Leticia')">
-        <div class="login-avatar-circle">L</div>
-        <div class="login-avatar-nome">Leticia</div>
-      </div>
-      <div class="login-avatar" onclick="selecionarUsuario('Michael de Matos Leal')">
-        <div class="login-avatar-circle">M</div>
-        <div class="login-avatar-nome">Michael</div>
-      </div>
-      <div class="login-avatar" onclick="selecionarUsuario('Taiti Gabriela Witter Loch')">
+      <div class="login-avatar" onclick="selecionarUsuario('Taiti')">
         <div class="login-avatar-circle">T</div>
         <div class="login-avatar-nome">Taiti</div>
       </div>
@@ -383,31 +301,24 @@ body{
         <div class="login-avatar-circle">W</div>
         <div class="login-avatar-nome">Wagner</div>
       </div>
-      <div class="login-avatar" onclick="selecionarUsuario('Outro')">
-        <div class="login-avatar-circle">+</div>
-        <div class="login-avatar-nome">Outro</div>
-      </div>
     </div>
 
     <div id="login-senha-box" class="login-senha-box">
       <div class="login-senha-usuario" id="login-senha-usuario"></div>
-      <input type="text" id="login-senha-input" class="login-senha-input" placeholder="● ● ● ●"
-             inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
-             oninput="digitarSenha(this)">
+      <input type="password" id="login-senha-input" class="login-senha-input" placeholder="Senha" autocomplete="off" onkeydown="if(event.key==='Enter')validarSenha()">
       <div id="login-senha-erro" class="login-senha-erro"></div>
       <div class="login-senha-botoes">
         <button class="login-btn-voltar" onclick="voltarLogin()">‹ Voltar</button>
+        <button class="login-btn-entrar" onclick="validarSenha()">Entrar</button>
       </div>
     </div>
 
-    <div class="login-footer" id="login-footer">Toque no seu nome para começar a dar baixa</div>
+    <div class="login-footer">Acesso exclusivo para gestores autorizados</div>
   </div>
 </div>
 
 <!-- ═══════ APP ═══════ -->
 <div id="app-conteudo" class="app-conteudo-protegido">
-
-  <div class="aniversario-banner" id="aniversario-banner"></div>
 
   <div class="hdr">
     <div class="hdr-left">
@@ -427,18 +338,73 @@ body{
         <circle cx="100" cy="80" r="6" fill="#f2f6d8"/>
       </svg>
       <div style="min-width:0;">
-        <div class="hdr-title">Baixa de Frios</div>
+        <div class="hdr-title">Estoque de Frios</div>
         <div class="hdr-sub" id="data-hora"></div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="save-status" id="save-status"><span class="status-dot" id="save-dot"></span><span id="save-txt">…</span></div>
-      <button class="hdr-btn" onclick="trocarUsuario()" title="Trocar quem está pesando"><i class="ti ti-user"></i></button>
+      <button class="hdr-btn" onclick="exportarRelatorio()" title="Exportar relatório"><i class="ti ti-download"></i></button>
+    </div>
+  </div>
+
+  <div class="cards" id="summary-cards">
+    <div class="card-m"><div class="label">Produtos</div><div class="val val-white" id="s-total">—</div></div>
+    <div class="card-m"><div class="label">Estoque OK</div><div class="val val-green" id="s-ok">—</div></div>
+    <div class="card-m"><div class="label">Baixo / zerado</div><div class="val val-yellow" id="s-low">—</div></div>
+    <div class="card-m"><div class="label">Validades críticas</div><div class="val val-white" id="s-venc">—</div></div>
+  </div>
+
+  <!-- ───── ESTOQUE / CADASTRO ───── -->
+  <div class="section active" id="sec-estoque">
+    <div class="form-card">
+      <h3>Cadastrar novo produto</h3>
+      <div class="msg msg-ok" id="msg-add"></div>
+      <div class="field">
+        <label>Código interno / EAN</label>
+        <div class="field-row">
+          <input type="text" id="add-codigo" placeholder="ex: 80" inputmode="numeric">
+          <button class="scan-btn-inline" onclick="abrirScanner(function(c){ document.getElementById('add-codigo').value=c; })" title="Escanear código"><i class="ti ti-barcode"></i></button>
+        </div>
+      </div>
+      <div class="field"><label>Nome do produto</label><input type="text" id="add-nome" placeholder="ex: QUEIJO PRATO KG"></div>
+      <div class="field"><label>Unidade de medida</label>
+        <select id="add-unidade">
+          <option value="kg">kg (Quilograma)</option>
+          <option value="un">un (Unidade)</option>
+          <option value="pct">pct (Pacote)</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Mínimo alerta</label><input type="number" id="add-min" value="1.0" step="0.001" min="0"></div>
+        <div class="field"><label>Estoque inicial</label><input type="number" id="add-saldo" value="0.0" step="0.001" min="0"></div>
+      </div>
+      <button class="btn-primary" onclick="adicionarProduto()">+ Adicionar produto</button>
+    </div>
+
+    <div class="sec-hdr"><h2>Produtos em estoque</h2></div>
+    <div id="lista-estoque"></div>
+  </div>
+
+  <!-- ───── ENTRADA ───── -->
+  <div class="section" id="sec-entrada">
+    <div class="form-card">
+      <h3>Registrar entrada de produto</h3>
+      <div class="msg msg-ok" id="msg-entrada"></div>
+      <div class="field"><label>Produto</label>
+        <select id="ent-produto" onchange="preencherEntrada()"><option value="">Selecione...</option></select>
+      </div>
+      <div class="field"><label>Código</label><input type="text" id="ent-codigo" readonly placeholder="Automático"></div>
+      <div class="field"><label>Quantidade / peso recebido</label><input type="number" id="ent-peso" placeholder="ex: 2.350" step="0.001" min="0"></div>
+      <div class="field"><label>Validade</label><input type="date" id="ent-validade"></div>
+      <div class="field"><label>Responsável</label><input type="text" id="ent-resp" placeholder="Nome"></div>
+      <button class="btn-primary" onclick="registrarEntrada()">Confirmar entrada</button>
+      <p style="font-size:11px;color:var(--text3);margin-top:10px;">Se a validade for nova, um novo lote independente será criado.</p>
     </div>
   </div>
 
   <!-- ───── BAIXA POR ETIQUETA UPC ───── -->
-  <div class="section active" id="sec-baixa">
+  <div class="section" id="sec-baixa">
     <button class="btn-scan-big" onclick="abrirScanner(function(c){ preencherBaixaComScan(c); })">
       <i class="ti ti-scan"></i>
       Escanear etiqueta da balança
@@ -474,7 +440,33 @@ body{
     </div>
   </div>
 
+  <!-- ───── PREÇOS ───── -->
+  <div class="section" id="sec-precos">
+    <div class="form-card">
+      <h3>Preço por kg (usado no cálculo da etiqueta UPC)</h3>
+      <p style="font-size:11.5px;color:var(--text2);">Quando a balança grava o valor total no código, o sistema divide pelo preço/kg para descobrir o peso. Mantenha atualizado.</p>
+    </div>
+    <div id="lista-precos"></div>
+  </div>
 
+  <!-- ───── HISTÓRICO ───── -->
+  <div class="section" id="sec-historico">
+    <div class="sec-hdr">
+      <h2>Movimentações</h2>
+      <button class="btn-sm danger" style="width:auto;padding:6px 12px;" onclick="limparHistorico()">Limpar tudo</button>
+    </div>
+    <div id="lista-historico"></div>
+  </div>
+
+</div>
+
+<!-- ═══════ BOTTOM NAV ═══════ -->
+<div class="bottom-nav" id="bottomNav" style="display:none;">
+  <button class="nav-btn active" id="tab-estoque" onclick="switchTab('estoque')"><i class="ti ti-layout-grid"></i>Estoque</button>
+  <button class="nav-btn" id="tab-entrada" onclick="switchTab('entrada')"><i class="ti ti-square-rounded-plus"></i>Entrada</button>
+  <button class="nav-btn" id="tab-baixa" onclick="switchTab('baixa')"><i class="ti ti-scan"></i>Baixa</button>
+  <button class="nav-btn" id="tab-precos" onclick="switchTab('precos')"><i class="ti ti-currency-dollar"></i>Preços</button>
+  <button class="nav-btn" id="tab-historico" onclick="switchTab('historico')"><i class="ti ti-history"></i>Histórico</button>
 </div>
 
 <!-- ═══════ SCANNER MODAL ═══════ -->
@@ -780,6 +772,7 @@ function onScanSuccess(code) {
 
 // Preenche o campo de baixa com o código escaneado e já dispara o parser
 function preencherBaixaComScan(codigo) {
+  switchTab('baixa');
   var el = document.getElementById('baixa-upc');
   el.value = codigo;
   parsearUPC();
@@ -826,7 +819,9 @@ function carregar(){
       historico = dados.historico || [];
       if (!dados.estoque || !dados.estoque.length) salvar();
 
+      popularSelect(); renderEstoque(); renderPrecos(); renderHistorico(); atualizarSummary();
       setSaveStatus('Online ✓', '#4caf50');
+      document.getElementById('bottomNav').style.display = 'flex';
       document.getElementById('offlineBar').classList.remove('show');
 
       if (!pollingInterval) pollingInterval = setInterval(sincronizar, 20000);
@@ -835,6 +830,7 @@ function carregar(){
       console.error('Erro ao carregar da planilha:', e);
       setSaveStatus('Erro de conexão', '#e05252');
       document.getElementById('offlineBar').classList.add('show');
+      document.getElementById('bottomNav').style.display = 'flex';
     });
 }
 
@@ -844,6 +840,7 @@ function sincronizar(){
     .then(r => r.json())
     .then(dados => {
       estoque = dados.estoque || []; historico = dados.historico || [];
+      popularSelect(); renderEstoque(); renderPrecos(); renderHistorico(); atualizarSummary();
       setSaveStatus('Online ✓', '#4caf50');
       document.getElementById('offlineBar').classList.remove('show');
     })
@@ -863,12 +860,12 @@ async function salvar(){
   salvando=false;
 }
 
-function trocarUsuario(){
-  storageSet(LOGIN_STORAGE_KEY, '');
-  document.getElementById('baixa-resp').value = '';
-  document.getElementById('app-conteudo').style.display = 'none';
-  document.getElementById('login-overlay').style.display = 'flex';
-  voltarLogin();
+function switchTab(t){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('sec-'+t).classList.add('active');
+  window.scrollTo(0,0);
 }
 
 function statusVal(v){
@@ -883,10 +880,212 @@ function statusVal(v){
 function fmtData(iso){ if(!iso)return'—'; const[y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
 function fmtHora(ts){ const d=new Date(ts); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
 
+function renderEstoque(){
+  const wrap=document.getElementById('lista-estoque');
+  if(!estoque.length){ wrap.innerHTML='<div class="empty-state">Nenhum produto cadastrado</div>'; return; }
+  wrap.innerHTML=estoque.map((p,i)=>{
+    const sv=statusVal(p.validade);
+    let vBadge='';
+    if(sv==='vencido')vBadge='<span class="badge b-venc">Vencido</span>';
+    else if(sv==='vencendo')vBadge='<span class="badge b-low">Vence em breve</span>';
+    let sBadge='';
+    if(p.saldo<=0)sBadge='<span class="badge b-zero">Zerado</span>';
+    else if(p.saldo<p.min)sBadge='<span class="badge b-low">Baixo</span>';
+    else sBadge='<span class="badge b-ok">OK</span>';
+    const und=p.unidade||'kg';
+    return`<div class="item-card">
+      <div class="item-card-top">
+        <div><div class="item-nome">${p.nome}</div><div class="item-cod">Cód. ${p.codigo} • Val. ${fmtData(p.validade)}</div></div>
+        ${sBadge}
+      </div>
+      <div class="item-meta"><strong>${p.saldo.toFixed(3)} ${und}</strong> em estoque ${vBadge}</div>
+      <div class="item-actions">
+        <button class="btn-sm" onclick="editarValidade(${i})">Validade</button>
+        <button class="btn-sm" onclick="editarProduto(${i})">Editar</button>
+        <button class="btn-sm" onclick="corrigirSaldo(${i})">Saldo</button>
+        <button class="btn-sm danger" onclick="excluirProduto(${i})">Excluir</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function editarValidade(i){
+  const v=prompt('Validade para '+estoque[i].nome+'\n(formato: dd/mm/aaaa)',fmtData(estoque[i].validade));
+  if(!v)return;
+  const pts=v.split('/');
+  if(pts.length===3){estoque[i].validade=pts[2]+'-'+pts[1]+'-'+pts[0];salvar();renderEstoque();atualizarSummary();}
+}
+
+function editarProduto(i){
+  const p=estoque[i];
+  const novoNome=prompt('Editar nome do produto:',p.nome);
+  if(novoNome===null)return;
+  const novoMinStr=prompt('Editar estoque mínimo:',p.min);
+  if(novoMinStr===null)return;
+  const novoMin=parseFloat(novoMinStr);
+  if(isNaN(novoMin))return alert('Estoque mínimo inválido.');
+  const novaUnidade=prompt('Editar unidade (ex: kg, un, pct):',p.unidade||'kg');
+  if(novaUnidade===null)return;
+  const codProd = p.codigo;
+  estoque.forEach(item => {
+    if(item.codigo === codProd){
+      item.nome=novoNome.trim().toUpperCase()||item.nome;
+      item.min=novoMin;
+      item.unidade=novaUnidade.trim().toLowerCase()||'kg';
+    }
+  });
+  popularSelect(); salvar(); renderEstoque(); atualizarSummary();
+}
+
+function corrigirSaldo(i){
+  const p=estoque[i];
+  const und=p.unidade||'kg';
+  const novoSaldoStr=prompt(`Corrigir saldo de ${p.nome} (Lote: ${fmtData(p.validade)}) de ${p.saldo.toFixed(3)} ${und} para:`,p.saldo);
+  if(novoSaldoStr===null)return;
+  const novoSaldo=parseFloat(novoSaldoStr);
+  if(isNaN(novoSaldo))return alert('Saldo informado é inválido.');
+  const resp=prompt('Responsável / Motivo do ajuste manual:','');
+  const antigoSaldo=p.saldo;
+  const diff=novoSaldo-antigoSaldo;
+  p.saldo=novoSaldo;
+  const totalConsolidado = estoque.filter(item => item.codigo === p.codigo).reduce((sum, item) => sum + item.saldo, 0);
+  historico.push({
+    ts:Date.now(), tipo:diff>=0?'entrada':'baixa', codigo:p.codigo,
+    nome:p.nome + (p.validade ? ' (LOTE '+fmtData(p.validade)+')' : ''),
+    peso:Math.abs(diff), saldoApos:totalConsolidado,
+    resp:(resp?(resp+' (Ajuste)'):'Ajuste manual')
+  });
+  salvar(); renderEstoque(); atualizarSummary(); renderHistorico();
+}
+
+function renderPrecos(){
+  const wrap=document.getElementById('lista-precos');
+  if(!wrap)return;
+  const vistos = new Set();
+  let html = '';
+  estoque.forEach((p,i)=>{
+    if(!vistos.has(p.codigo)){
+      vistos.add(p.codigo);
+      const preco=p.precoKg||0;
+      const semPreco=preco===0;
+      html += `<div class="item-card">
+        <div class="item-card-top">
+          <div><div class="item-nome">${p.nome}</div><div class="item-cod">Cód. ${p.codigo}</div></div>
+          ${semPreco?'<span class="badge b-zero">Sem preço</span>':'<span class="badge b-ok">R$ '+preco.toFixed(2)+'/kg</span>'}
+        </div>
+        <div class="preco-row">
+          <input type="number" id="preco-inp-${i}" placeholder="ex: 29.90" step="0.01" min="0" value="${preco>0?preco:''}">
+          <button onclick="salvarPreco(${i})">Salvar</button>
+        </div>
+      </div>`;
+    }
+  });
+  wrap.innerHTML = html || '<div class="empty-state">Nenhum produto cadastrado</div>';
+}
+
+function salvarPreco(i){
+  const inp=document.getElementById('preco-inp-'+i);
+  const val=parseFloat(inp.value);
+  if(isNaN(val)||val<0)return alert('Preço inválido.');
+  const codProd = estoque[i].codigo;
+  estoque.forEach(p => { if(mesmoCodigo(p.codigo,codProd)) p.precoKg=val; });
+  salvar(); renderPrecos();
+}
+
+function adicionarProduto(){
+  const cod=document.getElementById('add-codigo').value.trim();
+  const nome=document.getElementById('add-nome').value.trim().toUpperCase();
+  const und=document.getElementById('add-unidade').value;
+  const min=parseFloat(document.getElementById('add-min').value)||0;
+  const saldo=parseFloat(document.getElementById('add-saldo').value)||0;
+
+  if(!cod||!nome)return mostrarMsg('msg-add','msg-err','Código e nome do produto são obrigatórios.');
+  if(estoque.some(p=>mesmoCodigo(p.codigo,cod)))return mostrarMsg('msg-add','msg-err','Já existe um produto com esse código.');
+
+  estoque.push({codigo:cod,nome,unidade:und,min,saldo,validade:'',precoKg:0});
+
+  document.getElementById('add-codigo').value='';
+  document.getElementById('add-nome').value='';
+  document.getElementById('add-min').value='1.0';
+  document.getElementById('add-saldo').value='0.0';
+
+  popularSelect(); salvar(); renderEstoque(); renderPrecos(); atualizarSummary();
+  mostrarMsg('msg-add','msg-ok','✓ Produto adicionado.');
+}
+
+function excluirProduto(i){
+  if(confirm(`Tem certeza que deseja REMOVER este lote de ${estoque[i].nome} permanentemente?`)){
+    estoque.splice(i,1);
+    popularSelect(); salvar(); renderEstoque(); atualizarSummary();
+  }
+}
+
+function atualizarSummary(){
+  const total=estoque.length;
+  const zeros=estoque.filter(p=>p.saldo<=0).length;
+  const baixos=estoque.filter(p=>p.saldo>0&&p.saldo<p.min).length;
+  const venc=estoque.filter(p=>{const s=statusVal(p.validade);return s==='vencido'||s==='vencendo';}).length;
+  document.getElementById('s-total').textContent=total;
+  document.getElementById('s-ok').textContent=total-zeros-baixos;
+  document.getElementById('s-low').textContent=zeros+baixos;
+  const vEl=document.getElementById('s-venc');
+  vEl.textContent=venc;
+  vEl.className='val '+(venc>0?'val-red':'val-white');
+}
+
+function popularSelect(){
+  const sel=document.getElementById('ent-produto');
+  sel.innerHTML='<option value="">Selecione...</option>';
+  const vistos=new Set();
+  estoque.forEach((p,i)=>{
+    if(!vistos.has(p.codigo)){
+      vistos.add(p.codigo);
+      const o=document.createElement('option');
+      o.value=i;o.textContent=p.nome;sel.appendChild(o);
+    }
+  });
+}
+
+function preencherEntrada(){
+  const i=document.getElementById('ent-produto').value;
+  document.getElementById('ent-codigo').value=i===''?'':estoque[i].codigo;
+}
+
 function mostrarMsg(id,tipo,txt){
   const el=document.getElementById(id);
   el.className='msg '+tipo+' show';el.textContent=txt;
   setTimeout(()=>el.classList.remove('show'),4000);
+}
+
+function registrarEntrada(){
+  const idx=document.getElementById('ent-produto').value;
+  const peso=parseFloat(document.getElementById('ent-peso').value);
+  const val=document.getElementById('ent-validade').value;
+  const resp=document.getElementById('ent-resp').value.trim();
+  if(idx==='')return mostrarMsg('msg-entrada','msg-err','Selecione o produto.');
+  if(!peso||peso<=0)return mostrarMsg('msg-entrada','msg-err','Informe um peso válido.');
+  const i=parseInt(idx);
+  const baseProd=estoque[i];
+  const und=baseProd.unidade||'kg';
+
+  let loteExistente = estoque.find(p => mesmoCodigo(p.codigo,baseProd.codigo) && p.validade === val);
+  if (loteExistente) {
+    loteExistente.saldo = Math.round((loteExistente.saldo + peso) * 1000) / 1000;
+  } else {
+    if (baseProd.saldo > 0 && val && baseProd.validade !== val) {
+      estoque.push({ codigo: baseProd.codigo, nome: baseProd.nome, unidade: baseProd.unidade || 'kg', min: baseProd.min || 1.0, precoKg: baseProd.precoKg || 0, saldo: peso, validade: val });
+    } else {
+      baseProd.saldo = Math.round((baseProd.saldo + peso) * 1000) / 1000;
+      if (val) baseProd.validade = val;
+    }
+  }
+  const totalConsolidado = estoque.filter(p => mesmoCodigo(p.codigo,baseProd.codigo)).reduce((sum, p) => sum + p.saldo, 0);
+  historico.push({ts:Date.now(),tipo:'entrada',codigo:baseProd.codigo,nome:baseProd.nome,peso,saldoApos:totalConsolidado,resp});
+
+  popularSelect(); salvar(); renderEstoque(); atualizarSummary(); renderHistorico(); renderPrecos();
+  mostrarMsg('msg-entrada','msg-ok','✓ Entrada de '+peso.toFixed(3)+' '+und+' registrada.');
+  document.getElementById('ent-peso').value='';
+  document.getElementById('ent-validade').value='';
 }
 
 function parsearUPC(){
@@ -960,11 +1159,67 @@ function registrarBaixa(){
   const totalConsolidado = estoque.filter(p => mesmoCodigo(p.codigo,codProd)).reduce((sum, p) => sum + p.saldo, 0);
   historico.push({ts:Date.now(),tipo:'baixa',codigo:codProd,nome:nomeProd,peso:pesoKg,saldoApos:totalConsolidado,resp});
 
-  salvar();
+  salvar(); renderEstoque(); atualizarSummary(); renderHistorico();
   mostrarMsg('msg-baixa','msg-ok','✓ Baixa de '+pesoKg.toFixed(3)+' '+und+'. Saldo total: '+totalConsolidado.toFixed(3)+' '+und);
   document.getElementById('baixa-upc').value='';
   document.getElementById('baixa-manual').value='';
   document.getElementById('upc-box').classList.remove('show');
+}
+
+function renderHistorico(){
+  const wrap=document.getElementById('lista-historico');
+  const rows=[...historico].reverse();
+  if(!rows.length){wrap.innerHTML='<div class="empty-state">Nenhuma movimentação</div>';return;}
+  wrap.innerHTML=rows.map((r,i)=>{
+    const idxReal=historico.length-1-i;
+    const prod=estoque.find(p=>mesmoCodigo(p.codigo,r.codigo));
+    const und=prod?(prod.unidade||'kg'):'kg';
+    return `<div class="item-card">
+      <div class="item-card-top">
+        <div><div class="item-nome">${r.nome}</div><div class="item-cod">${fmtHora(r.ts)} • ${r.resp||'—'}</div></div>
+        <span class="badge ${r.tipo==='entrada'?'b-entry':'b-baixa'}">${r.tipo==='entrada'?'Entrada':'Baixa'}</span>
+      </div>
+      <div class="item-meta">
+        <strong style="color:${r.tipo==='entrada'?'var(--green)':'var(--yellow)'};">${r.tipo==='entrada'?'+':'-'}${Math.abs(r.peso).toFixed(3)} ${und}</strong>
+        &nbsp;→ saldo ${r.saldoApos.toFixed(3)} ${und}
+      </div>
+      <button class="btn-sm danger" style="width:100%;" onclick="excluirItemHistorico(${idxReal})">Apagar registro</button>
+    </div>`;
+  }).join('');
+}
+
+function excluirItemHistorico(idx){
+  if(confirm('Tem certeza que deseja apagar permanentemente esse registro do histórico? (Isso não altera o saldo atual do estoque)')){
+    historico.splice(idx,1);
+    salvar();renderHistorico();
+  }
+}
+
+function limparHistorico(){
+  if(confirm('Limpar TODO o histórico de movimentações permanentemente?')){historico=[];salvar();renderHistorico();}
+}
+
+function exportarRelatorio(){
+  let txt='RELATÓRIO DE ESTOQUE DE FRIOS\n'+new Date().toLocaleDateString('pt-BR')+'\n\n';
+  txt+='Produto|Código|Estoque|Unidade|Validade|Status\n';
+  estoque.forEach(p=>{
+    const sv=statusVal(p.validade);
+    const st=p.saldo<=0?'Zerado':p.saldo<p.min?'Baixo':'OK';
+    const vObs=sv==='vencido'?' (VENCIDO)':sv==='vencendo'?' (VENCE EM BREVE)':'';
+    txt+=p.nome+'|'+p.codigo+'|'+p.saldo.toFixed(3)+'|'+(p.unidade||'kg')+'|'+fmtData(p.validade)+vObs+'|'+st+'\n';
+  });
+  txt+='\nHISTÓRICO DE MOVIMENTAÇÕES\n\n';
+  txt+='Data/Hora|Produto|Tipo|Quantidade|Saldo após|Responsável\n';
+  [...historico].reverse().forEach(r=>{
+    const prod=estoque.find(p=>mesmoCodigo(p.codigo,r.codigo));
+    const und=prod?(prod.unidade||'kg'):'kg';
+    txt+=fmtHora(r.ts)+'|'+r.nome+'|'+(r.tipo==='entrada'?'Entrada':'Baixa')+'|'+(r.tipo==='entrada'?'+':'-')+Math.abs(r.peso).toFixed(3)+' '+und+'|'+r.saldoApos.toFixed(3)+' '+und+'|'+(r.resp||'—')+'\n';
+  });
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='estoque_frios_'+new Date().toISOString().slice(0,10)+'.txt';
+  a.click();
 }
 
 function atualizarRelogio(){
